@@ -159,6 +159,22 @@ ruleTester.run('no-pending-tests', noPendingTestsRule, {
         {
             code: 'var dynamicOnly = "skip"; suite[dynamicOnly]()',
             errors: [{ message: expectedErrorMessage, column: 33, line: 1 }]
+        },
+        {
+            code: 'import {custom} from "../helpers.js";custom.skip()',
+            languageOptions: {
+                sourceType: 'module'
+            },
+            settings: {
+                'mocha/additionalCustomNames': [
+                    {
+                        name: 'custom',
+                        type: 'suite',
+                        interface: 'exports'
+                    }
+                ]
+            },
+            errors: [{ message: expectedErrorMessage, column: 45, line: 1 }]
         }
     ]
 });

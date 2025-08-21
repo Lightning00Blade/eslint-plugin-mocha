@@ -6,13 +6,19 @@ import { getUniqueBaseNames } from '../mocha/path.js';
 import { type DynamicPath, isConstantPath } from './member-expression.js';
 import { findParentNodeAndPathForIdentifier, type ResolvedReference } from './resolved-reference.js';
 
-function isLiteralWithValue(node: Except<Rule.Node, 'parent'>, expectedValue: string): boolean {
-    return node.type === 'Literal' && node.value === expectedValue;
+function isLiteralWithValue(
+    node: Except<Rule.Node, "parent">,
+    expectedValue: string | null,
+): boolean {
+    return (
+        node.type === "Literal" &&
+        (expectedValue === null || node.value === expectedValue)
+    );
 }
 
 function isExclusiveNamedImportBindingWithMatchingSource(
     variable: Readonly<Scope.Variable>,
-    expectedSource: string
+    expectedSource: string | null,
 ): boolean {
     const importDef = variable.defs[0];
 
@@ -25,7 +31,7 @@ function isExclusiveNamedImportBindingWithMatchingSource(
 
 function getAllNamedImportBindingVariables(
     moduleScope: Readonly<Scope.Scope>,
-    expectedSource: string
+    expectedSource: string | null,
 ): readonly Scope.Variable[] {
     return filterWithArgs(moduleScope.variables, isExclusiveNamedImportBindingWithMatchingSource, expectedSource);
 }
@@ -91,7 +97,7 @@ function processNamedImports(
     sourceCode: Readonly<SourceCode>,
     moduleScope: Readonly<Scope.Scope>,
     identifierNames: readonly string[],
-    importSource: string
+    importSource: string | null,
 ): readonly ResolvedReference[] {
     const namedImportVariables = getAllNamedImportBindingVariables(moduleScope, importSource);
     const constantNamedImports = namedImportVariables.filter(isBindingConstant);
@@ -102,7 +108,7 @@ function processNamedImports(
 export function findImportReferencesByName(
     context: Readonly<Rule.RuleContext>,
     nameDetailsList: readonly NameDetails[],
-    importSource: string
+    importSource: string | null,
 ): readonly ResolvedReference[] {
     const { sourceCode } = context;
     const { globalScope } = sourceCode.scopeManager;

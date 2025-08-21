@@ -10,6 +10,7 @@ import { findImportReferencesByName } from './find-import-references.js';
 import { type DynamicPath, isConstantPath } from './member-expression.js';
 import { type CallExpression, isCallExpression, isMemberExpression } from './node-types.js';
 import type { ResolvedReference } from './resolved-reference.js';
+import { builtinNameDetailsList } from '../mocha/all-name-details.js';
 
 function isCallExpressionReference(reference: Readonly<ResolvedReference>): boolean {
     return reference.node.type === 'CallExpression';
@@ -113,24 +114,57 @@ function isResultWithConstantPath(result: Readonly<ResolvedReference>): boolean 
 
 export function findMochaVariableCalls(
     context: Readonly<Rule.RuleContext>,
-    names: readonly NameDetails[],
+    customNames: readonly NameDetails[],
     interfaceToUse: MochaInterface
 ): readonly ResolvedReferenceWithNameDetails[] {
     const { sourceCode } = context;
+
+    const defaultNames = builtinNameDetailsList;
     const references = interfaceToUse === 'exports'
-        ? findImportReferencesByName(context, names, 'mocha')
-        : findGlobalReferencesByName(context, names);
+        ? findImportReferencesByName(context, defaultNames, 'mocha')
+        : findGlobalReferencesByName(context, defaultNames);
+    const customReferences = {
+        exports: customNames.filter((name) => {
+            return name.interface === 'exports';
+        }),
+        globals: customNames.filter((name) => {
+            return name.interface !== 'exports';
+        })
+    };
+    const customExportsReferences = customReferences.exports.length > 0
+        ? findImportReferencesByName(
+            context,
+            customReferences.exports,
+            null
+        )
+        : [];
+    const customGlobalReferences = customReferences.globals.length > 0
+        ? findGlobalReferencesByName(
+            context,
+            customReferences.globals
+        )
+        : [];
 
-    const resolvedReferences = resolveAliasedReferences(sourceCode, references);
+    const resolvedReferences = resolveAliasedReferences(sourceCode, [
+        ...references,
+        ...customExportsReferences,
+        ...customGlobalReferences
+    ]);
 
-    const constantResolvedReferences = reduceWithArgs(resolvedReferences, shouldProcessReference, []);
+    const constantResolvedReferences = reduceWithArgs(
+        resolvedReferences,
+        shouldProcessReference,
+        []
+    );
 
-    const filteredReferences = constantResolvedReferences.filter(isResultWithConstantPath);
+    const filteredReferences = constantResolvedReferences.filter(
+        isResultWithConstantPath
+    );
 
     return reduceWithArgs(
         filteredReferences,
         shouldAddReferenceToResults,
         [],
-        names
+        [...customNames, ...defaultNames]
     );
 }
