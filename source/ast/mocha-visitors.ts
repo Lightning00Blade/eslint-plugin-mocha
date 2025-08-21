@@ -1,9 +1,10 @@
 import type { Rule, SourceCode } from 'eslint';
-import { getAllNames } from '../mocha/all-name-details.js';
+import { nameConfigToNameDetails } from '../mocha/all-name-details.js';
 import type { MochaEntityType, MochaInterface, MochaModifier } from '../mocha/descriptors.js';
 import { getAdditionalNames, getInterface } from '../settings.js';
 import { findMochaVariableCalls, type ResolvedReferenceWithNameDetails } from './find-mocha-variable-calls.js';
 import { isCallExpression } from './node-types.js';
+import { buildAllNameDetailsWithVariants } from '../mocha/name-details.js';
 
 type Range = [number, number];
 
@@ -186,9 +187,14 @@ function findCallsCached(context: Readonly<Rule.RuleContext>): readonly Resolved
     if (calls === undefined) {
         const additionalCustomNames = getAdditionalNames(context.settings);
         const interfaceToUse = getInterface(context.settings);
-        const names = getAllNames(additionalCustomNames);
 
-        calls = findMochaVariableCalls(context, names, interfaceToUse);
+        calls = findMochaVariableCalls(
+            context,
+            buildAllNameDetailsWithVariants(
+                additionalCustomNames.map(nameConfigToNameDetails)
+            ),
+            interfaceToUse
+        );
         callsPerSettings.set(callCacheKey, calls);
     }
 
